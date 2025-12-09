@@ -1,0 +1,46 @@
+# -------------------------
+# ENVIRONMENT FILES
+# -------------------------
+.env
+*.env
+
+# -------------------------
+# PYTHON VIRTUAL ENVIRONMENTS
+# -------------------------
+venv/
+.venv/
+
+# -------------------------
+# PYTHON CACHE FILES
+# -------------------------
+__pycache__/
+*.pyc
+
+# -------------------------
+# STREAMLIT SECRETS (if used)
+# -------------------------
+.streamlit/
+
+# -------------------------
+# LOGS
+# -------------------------
+*.log
+
+# -------------------------
+# OS SYSTEM FILES
+# -------------------------
+.DS_Store
+Thumbs.db
+
+# -------------------------
+# MODEL MEMORY / CACHE
+# (Optional: keep if you need the council_memory file)
+# -------------------------
+council_memory/
+
+# -------------------------
+# NODE / FRONTEND BUILD (if frontend uses Node)
+# -------------------------
+frontend/node_modules/
+dist/
+build/
