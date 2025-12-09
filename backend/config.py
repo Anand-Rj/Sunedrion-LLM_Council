@@ -3,6 +3,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+def clean(key: str):
+    if key is None:
+        return None
+    return key.strip().replace("\r", "").replace("\n", "")
+
 class Config:
 
     # -----------------------------
@@ -30,18 +35,18 @@ class Config:
     # -----------------------------
     # API KEYS (UNCHANGED)
     # -----------------------------
-    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-    PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY")
-    GROK_API_KEY = os.getenv("GROK_API_KEY")
+    OPENAI_API_KEY = clean(os.getenv("OPENAI_API_KEY"))
+    PERPLEXITY_API_KEY = clean(os.getenv("PERPLEXITY_API_KEY"))
+    GROK_API_KEY = clean(os.getenv("GROK_API_KEY"))
     #KIMI_API_KEY = os.getenv("KIMI_API_KEY")
-    YOU_API_KEY = os.getenv("YOU_API_KEY")
-    DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
-    ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+    YOU_API_KEY = clean(os.getenv("YOU_API_KEY"))
+    DEEPSEEK_API_KEY = clean(os.getenv("DEEPSEEK_API_KEY"))
+    ANTHROPIC_API_KEY = clean(os.getenv("ANTHROPIC_API_KEY"))
 
     # ======================================================
     # 🚀 GEMINI (ONLY VIA OPENROUTER)
     # ======================================================
-    OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+    OPENROUTER_API_KEY = clean(os.getenv("OPENROUTER_API_KEY"))
 
     GEMINI_OPENROUTER_MODEL = "google/gemini-3-pro-preview"
     GEMINI_OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
