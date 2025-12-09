@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import pandas as pd
+import os   # <-- added for environment variable support
 
 st.set_page_config(
     page_title="🏛️ Sunedrion – LLM Council",
@@ -9,11 +10,19 @@ st.set_page_config(
 
 st.title("🏛️ Sunedrion – LLM Council")
 
+# --------------------------------------------
+# USE BACKEND URL FROM RENDER ENVIRONMENT
+# --------------------------------------------
+BACKEND = os.getenv("BACKEND_URL")
+# Example value in Render:
+# BACKEND_URL = https://llm-council-backend.onrender.com
+
 prompt = st.text_area("Enter your question:")
 
 if st.button("Run Council"):
+
     res = requests.post(
-        "http://localhost:8000/council",
+        f"{BACKEND}/council",
         json={"prompt": prompt}
     ).json()
 
@@ -23,7 +32,6 @@ if st.button("Run Council"):
     st.subheader("Final Answer")
     st.markdown(res["final"])   # keep existing variable name
 
-
     # -----------------------------------
     # SCORES AS NICE TABLE
     # -----------------------------------
@@ -31,13 +39,11 @@ if st.button("Run Council"):
 
     scores_dict = res["scores"]  # same variable
 
-    # Convert dict → DataFrame for table display
     df_scores = pd.DataFrame(
         [{"Model": k, "Score": v} for k, v in scores_dict.items()]
     ).sort_values(by="Score", ascending=False)
 
     st.table(df_scores)
-
 
     # -----------------------------------
     # RAW DELEGATE OUTPUTS (Per Model)
@@ -47,17 +53,11 @@ if st.button("Run Council"):
     outputs = res["outputs"]  # same variable
 
     for model_name, output in outputs.items():
-
-        # collapsible section
         with st.expander(f"🔽 {model_name.upper()}"):
 
-            # if it's dictionary JSON
             if isinstance(output, dict):
                 st.json(output)
-
-            # if it's text
             elif isinstance(output, str):
                 st.code(output, language="markdown")
-
             else:
                 st.write(output)
