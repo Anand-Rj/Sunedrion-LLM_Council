@@ -26,6 +26,8 @@ if st.button("Run Council"):
         json={"prompt": prompt}
     ).json()
 
+
+    st.write(res)
     # -----------------------------------
     # FINAL ANSWER (Nicely Rendered)
     # -----------------------------------
