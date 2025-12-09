@@ -1,5 +1,5 @@
 import aiohttp
-from backend.config import Config
+from config import Config
 
 async def call_kimi(prompt: str):
     headers = {

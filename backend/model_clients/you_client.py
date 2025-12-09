@@ -1,5 +1,5 @@
-from backend.model_clients.openai_client import call_openai_style
-from backend.config import Config
+from model_clients.openai_client import call_openai_style
+from config import Config
 
 async def call_you(prompt: str):
     return await call_openai_style(

@@ -1,7 +1,7 @@
 # backend/model_clients/openai_client.py
 
 import aiohttp
-from backend.config import Config
+from config import Config
 
 async def call_openai_style(prompt: str, base_url: str, model: str, api_key: str):
     """
