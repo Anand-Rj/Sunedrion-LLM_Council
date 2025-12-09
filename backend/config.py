@@ -59,10 +59,4 @@ class Config:
     KIMI_OPENROUTER_MODEL = "moonshotai/kimi-k2-thinking"
     KIMI_OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
-    print("OPENAI KEY LENGTH:", len(OPENAI_API_KEY))
-    print("PERPLEXITY KEY LENGTH:", len(PERPLEXITY_API_KEY))
-    print("GROK KEY LENGTH:", len(GROK_API_KEY))
-    print("YOU KEY LENGTH:", len(YOU_API_KEY))
-    print("DEEPSEEK KEY LENGTH:", len(DEEPSEEK_API_KEY))
-    print("ANTHROPIC KEY LENGTH:", len(ANTHROPIC_API_KEY))
-    print("OPENROUTER KEY LENGTH:", len(OPENROUTER_API_KEY))    
+ 
