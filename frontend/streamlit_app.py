@@ -16,7 +16,7 @@ st.title("🏛️ Sunedrion – LLM Council")
 BACKEND = os.getenv("BACKEND_URL")
 
 # Debug print - remove later
-st.write("🔧 BACKEND URL detected:", BACKEND)
+#st.write("🔧 BACKEND URL detected:", BACKEND)
 
 if not BACKEND:
     st.error("❌ BACKEND_URL is missing. Set it in Render → Environment Variables.")
@@ -55,7 +55,7 @@ if st.button("Run Council"):
         st.code(response.text)
         st.stop()
 
-    st.write("📬 Raw response from backend:", res)
+    #st.write("📬 Raw response from backend:", res)
 
     # ---------------------------------------------------------
     # VALIDATION FOR REQUIRED KEYS
