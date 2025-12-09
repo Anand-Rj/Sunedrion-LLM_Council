@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 import pandas as pd
-import os   # <-- added for environment variable support
+import os
 
 st.set_page_config(
     page_title="🏛️ Sunedrion – LLM Council",
@@ -10,51 +10,84 @@ st.set_page_config(
 
 st.title("🏛️ Sunedrion – LLM Council")
 
-# --------------------------------------------
-# USE BACKEND URL FROM RENDER ENVIRONMENT
-# --------------------------------------------
+# ---------------------------------------------------------
+# LOAD BACKEND URL (from Render Environment Variable)
+# ---------------------------------------------------------
 BACKEND = os.getenv("BACKEND_URL")
-# Example value in Render:
-# BACKEND_URL = https://llm-council-backend.onrender.com
+
+# Debug print - remove later
+st.write("🔧 BACKEND URL detected:", BACKEND)
+
+if not BACKEND:
+    st.error("❌ BACKEND_URL is missing. Set it in Render → Environment Variables.")
+    st.stop()
 
 prompt = st.text_area("Enter your question:")
 
+# ---------------------------------------------------------
+# RUN COUNCIL
+# ---------------------------------------------------------
 if st.button("Run Council"):
 
-    res = requests.post(
-        f"{BACKEND}/council",
-        json={"prompt": prompt}
-    ).json()
+    try:
+        response = requests.post(
+            f"{BACKEND}/council",
+            json={"prompt": prompt},
+            timeout=90  # free backend wakes up slowly
+        )
+    except Exception as e:
+        st.error(f"❌ Could not reach backend: {e}")
+        st.stop()
 
+    # ---------------------------------------------------------
+    # BACKEND ERROR HANDLING
+    # ---------------------------------------------------------
+    if response.status_code != 200:
+        st.error("❌ Backend returned an error:")
+        st.code(response.text)
+        st.stop()
 
-    st.write(res)
-    # -----------------------------------
-    # FINAL ANSWER (Nicely Rendered)
-    # -----------------------------------
+    # Convert to JSON safely
+    try:
+        res = response.json()
+    except:
+        st.error("❌ Backend did not return valid JSON.")
+        st.code(response.text)
+        st.stop()
+
+    st.write("📬 Raw response from backend:", res)
+
+    # ---------------------------------------------------------
+    # VALIDATION FOR REQUIRED KEYS
+    # ---------------------------------------------------------
+    required_keys = ["final", "scores", "outputs"]
+    for key in required_keys:
+        if key not in res:
+            st.error(f"❌ Backend response missing field: '{key}'")
+            st.write("Full response:", res)
+            st.stop()
+
+    # ---------------------------------------------------------
+    # FINAL ANSWER
+    # ---------------------------------------------------------
     st.subheader("Final Answer")
-    st.markdown(res["final"])   # keep existing variable name
+    st.markdown(res["final"])
 
-    # -----------------------------------
-    # SCORES AS NICE TABLE
-    # -----------------------------------
+    # ---------------------------------------------------------
+    # SCORES TABLE
+    # ---------------------------------------------------------
     st.subheader("Scores")
-
-    scores_dict = res["scores"]  # same variable
-
     df_scores = pd.DataFrame(
-        [{"Model": k, "Score": v} for k, v in scores_dict.items()]
+        [{"Model": k, "Score": v} for k, v in res["scores"].items()]
     ).sort_values(by="Score", ascending=False)
-
     st.table(df_scores)
 
-    # -----------------------------------
-    # RAW DELEGATE OUTPUTS (Per Model)
-    # -----------------------------------
+    # ---------------------------------------------------------
+    # RAW OUTPUTS FROM EACH DELEGATE
+    # ---------------------------------------------------------
     st.subheader("Raw Delegate Outputs")
 
-    outputs = res["outputs"]  # same variable
-
-    for model_name, output in outputs.items():
+    for model_name, output in res["outputs"].items():
         with st.expander(f"🔽 {model_name.upper()}"):
 
             if isinstance(output, dict):
