@@ -1,16 +1,16 @@
 import asyncio
-from backend.prompt_optimizer import optimize_prompt_for_all
-from backend.model_clients.gemini_client import call_gemini
-from backend.model_clients.claude_client import call_claude
-from backend.model_clients.perplexity_client import call_perplexity
-from backend.model_clients.grok_client import call_grok
-from backend.model_clients.you_client import call_you
-from backend.model_clients.kimi_client import call_kimi
-from backend.model_clients.deepseek_client import call_deepseek
-from backend.model_clients.openai_client import call_openai_style
-from backend.config import Config
-from backend.debate_engine import chairman_arbitrate
-from backend.memory_engine import MemoryEngine
+from prompt_optimizer import optimize_prompt_for_all
+from model_clients.gemini_client import call_gemini
+from model_clients.claude_client import call_claude
+from model_clients.perplexity_client import call_perplexity
+from model_clients.grok_client import call_grok
+from model_clients.you_client import call_you
+from model_clients.kimi_client import call_kimi
+from model_clients.deepseek_client import call_deepseek
+from model_clients.openai_client import call_openai_style
+from config import Config
+from debate_engine import chairman_arbitrate
+from memory_engine import MemoryEngine
 
 memory = MemoryEngine()
 
