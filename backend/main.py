@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-from council_manager import run_llm_council
+from backend.council_manager import run_llm_council
+
 
 app = FastAPI()
 

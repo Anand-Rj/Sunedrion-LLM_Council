@@ -1,5 +1,5 @@
 import aiohttp
-from config import Config
+from backend.config import Config
 
 async def call_claude(prompt: str):
     headers = {

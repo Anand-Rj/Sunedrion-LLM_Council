@@ -1,5 +1,5 @@
 import aiohttp
-from config import Config
+from backend.config import Config
 
 # Load config values from class
 OPENROUTER_API_KEY = Config.OPENROUTER_API_KEY

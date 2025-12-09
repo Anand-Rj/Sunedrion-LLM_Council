@@ -1,5 +1,5 @@
-from model_clients.openai_client import call_openai_style
-from config import Config
+from backend.model_clients.openai_client import call_openai_style
+from backend.config import Config
 
 async def call_grok(prompt: str):
     return await call_openai_style(
