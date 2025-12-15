@@ -1,4 +1,5 @@
 import aiohttp
+import asyncio
 from backend.config import Config
 
 async def call_kimi(prompt: str):
@@ -15,9 +16,21 @@ async def call_kimi(prompt: str):
         ]
     }
 
-    async with aiohttp.ClientSession() as session:
-        async with session.post(Config.KIMI_OPENROUTER_URL, json=payload, headers=headers, timeout=20) as resp:
-            try:
-                return await resp.json()
-            except:
-                return {"error": await resp.text()}
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                Config.KIMI_OPENROUTER_URL,
+                json=payload,
+                headers=headers,
+                timeout=40
+            ) as resp:
+                try:
+                    return await resp.json()
+                except:
+                    return await resp.text()
+
+    except asyncio.CancelledError:
+        return "TIMEOUT"
+
+    except Exception as e:
+        return f"KIMI ERROR: {str(e)}"

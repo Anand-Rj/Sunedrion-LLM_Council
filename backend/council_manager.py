@@ -19,7 +19,7 @@ async def run_llm_council(user_prompt: str):
     prompts = optimize_prompt_for_all(improved_prompt)
 
     TIMEOUT_OPENAI = 45
-    TIMEOUT_DEEPSEEK = 45
+    TIMEOUT_DEEPSEEK = 50
     TIMEOUT_CLAUDE = 30
     TIMEOUT_PERPLEXITY = 25
     TIMEOUT_KIMI = 25
