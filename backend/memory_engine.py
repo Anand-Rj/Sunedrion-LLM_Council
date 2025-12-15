@@ -24,11 +24,17 @@ class MemoryEngine:
         if not data["history"]:
             return user_prompt
 
-        totals = {"openai":0,"claude":0,"perplexity":0,"kimi":0,"deepseek":0}
+        # Models you currently support
+        valid_models = {"openai", "claude", "perplexity", "kimi", "deepseek"}
+
+        # Initialize totals safely
+        totals = {m: 0 for m in valid_models}
 
         for rec in data["history"]:
             for model, score in rec["scores"].items():
-                totals[model] += score
+                if model in totals:          # Only count valid models
+                    totals[model] += score
+                # else ignore removed models like grok, ari, openrouter
 
         best = max(totals, key=totals.get)
 
