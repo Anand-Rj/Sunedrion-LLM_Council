@@ -22,7 +22,7 @@ async def call_openai_style(prompt: str, base_url: str, model: str, api_key: str
     }
 
     async with aiohttp.ClientSession() as session:
-        async with session.post(base_url, json=payload, headers=headers, timeout=35) as resp:
+        async with session.post(base_url, json=payload, headers=headers, timeout=50) as resp:
             text = await resp.text()
 
             # Return raw text (llm response or error)

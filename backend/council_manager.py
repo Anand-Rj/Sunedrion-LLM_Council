@@ -18,15 +18,40 @@ async def run_llm_council(user_prompt: str):
     improved_prompt = memory.adjust_prompt(user_prompt)
     prompts = optimize_prompt_for_all(improved_prompt)
 
-    TIMEOUT_DELEGATE = 35   # safe for Render
+    TIMEOUT_OPENAI = 45
+    TIMEOUT_DEEPSEEK = 45
+    TIMEOUT_CLAUDE = 30
+    TIMEOUT_PERPLEXITY = 25
+    TIMEOUT_KIMI = 25
 
     tasks = [
-        run_with_timeout(call_openai_style(prompts["openai"], Config.OPENAI_BASE, Config.OPENAI_MODEL, Config.OPENAI_API_KEY), TIMEOUT_DELEGATE),
-        run_with_timeout(call_claude(prompts["claude"]), TIMEOUT_DELEGATE),
-        run_with_timeout(call_perplexity(prompts["perplexity"]), TIMEOUT_DELEGATE),
-        run_with_timeout(call_kimi(prompts["kimi"]), TIMEOUT_DELEGATE),
-        run_with_timeout(call_deepseek(prompts["deepseek"]), TIMEOUT_DELEGATE),
-    ]
+
+    # OPENAI (long timeout)
+    run_with_timeout(
+        call_openai_style(
+            prompts["openai"],
+            Config.OPENAI_BASE,
+            Config.OPENAI_MODEL,
+            Config.OPENAI_API_KEY
+        ),
+        TIMEOUT_OPENAI
+    ),
+
+    # CLAUDE
+    run_with_timeout(call_claude(prompts["claude"]), TIMEOUT_CLAUDE),
+
+    # PERPLEXITY
+    run_with_timeout(call_perplexity(prompts["perplexity"]), TIMEOUT_PERPLEXITY),
+
+    # KIMI
+    run_with_timeout(call_kimi(prompts["kimi"]), TIMEOUT_KIMI),
+
+    # DEEPSEEK (long timeout)
+    run_with_timeout(
+        call_deepseek(prompts["deepseek"]),
+        TIMEOUT_DEEPSEEK
+    )
+]
 
     results = await asyncio.gather(*tasks)
 

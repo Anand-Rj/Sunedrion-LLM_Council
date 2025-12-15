@@ -107,7 +107,7 @@ STRICT RULES:
     # Call Gemini via your existing wrapper
     from backend.timeout_wrapper import run_with_timeout
 
-    raw = await run_with_timeout(call_gemini(arbitration_prompt), timeout=60)
+    raw = await run_with_timeout(call_gemini(arbitration_prompt), timeout=55)
 
     print("\n=== RAW GEMINI OUTPUT ===")
     print(raw)
