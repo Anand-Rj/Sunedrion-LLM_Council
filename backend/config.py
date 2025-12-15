@@ -15,9 +15,9 @@ class Config:
     # -----------------------------
     OPENAI_BASE = "https://api.openai.com/v1/chat/completions"
     PERPLEXITY_BASE = "https://api.perplexity.ai/chat/completions"
-    GROK_BASE = "https://api.x.ai/v1/chat/completions"
+    #GROK_BASE = "https://api.x.ai/v1/chat/completions"
     #KIMI_BASE = "https://kimi-k2.ai/api/v1/chat/completions"
-    YOU_BASE = "https://api.you.com/v1/chat/completions"
+    #YOU_BASE = "https://api.you.com/v1/chat/completions"
     DEEPSEEK_BASE = "https://api.deepseek.com/v1/chat/completions"
     ANTHROPIC_BASE = "https://api.anthropic.com/v1/messages"
 
@@ -27,9 +27,9 @@ class Config:
     OPENAI_MODEL = "gpt-5.1"
     CLAUDE_MODEL = "claude-opus-4-5-20251101"
     PERPLEXITY_MODEL = "sonar-pro"
-    GROK_MODEL = "grok-2-latest"
+    #GROK_MODEL = "grok-2-latest"
     #KIMI_MODEL = "kimi-k2-thinking"
-    YOU_MODEL = "gpt-4.1"
+    #YOU_MODEL = "gpt-4.1"
     DEEPSEEK_MODEL = "deepseek-chat"
 
     # -----------------------------
@@ -37,9 +37,9 @@ class Config:
     # -----------------------------
     OPENAI_API_KEY = clean(os.getenv("OPENAI_API_KEY"))
     PERPLEXITY_API_KEY = clean(os.getenv("PERPLEXITY_API_KEY"))
-    GROK_API_KEY = clean(os.getenv("GROK_API_KEY"))
+    #GROK_API_KEY = clean(os.getenv("GROK_API_KEY"))
     #KIMI_API_KEY = os.getenv("KIMI_API_KEY")
-    YOU_API_KEY = clean(os.getenv("YOU_API_KEY"))
+    #YOU_API_KEY = clean(os.getenv("YOU_API_KEY"))
     DEEPSEEK_API_KEY = clean(os.getenv("DEEPSEEK_API_KEY"))
     ANTHROPIC_API_KEY = clean(os.getenv("ANTHROPIC_API_KEY"))
 

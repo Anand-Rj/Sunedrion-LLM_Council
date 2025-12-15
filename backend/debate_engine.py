@@ -4,9 +4,9 @@ from backend.config import Config
 from backend.model_clients.openai_client import call_openai_style
 from backend.model_clients.claude_client import call_claude
 from backend.model_clients.perplexity_client import call_perplexity
-from backend.model_clients.grok_client import call_grok
+#from backend.model_clients.grok_client import call_grok
 from backend.model_clients.kimi_client import call_kimi
-from backend.model_clients.you_client import call_you
+#from backend.model_clients.you_client import call_you
 from backend.model_clients.deepseek_client import call_deepseek
 from backend.model_clients.gemini_client import call_gemini
 
@@ -58,9 +58,9 @@ async def run_debate_round(user_prompt: str):
     results["openai"] = await safe_call("openai", call_openai_style)
     results["claude"] = await safe_call("claude", call_claude)
     results["perplexity"] = await safe_call("perplexity", call_perplexity)
-    results["grok"] = await safe_call("grok", call_grok)
+    #results["grok"] = await safe_call("grok", call_grok)
     results["kimi"] = await safe_call("kimi", call_kimi)
-    results["you"] = await safe_call("you", call_you)
+    #results["you"] = await safe_call("you", call_you)
     results["deepseek"] = await safe_call("deepseek", call_deepseek)
 
     return results
@@ -116,9 +116,7 @@ JSON FORMAT (STRICT):
       "openai": 0.0,
       "claude": 0.0,
       "perplexity": 0.0,
-      "grok": 0.0,
       "kimi": 0.0,
-      "ari": 0.0,
       "deepseek": 0.0
   }}
 }}
@@ -146,7 +144,7 @@ STRICT RULES:
     except:
         return "Chairman failed to respond.", {
             "openai": 0, "claude": 0, "perplexity": 0,
-            "grok": 0, "kimi": 0, "ari": 0, "deepseek": 0
+            "kimi": 0, "deepseek": 0
         }
 
     print("=== GEMINI CONTENT ONLY ===")
@@ -167,9 +165,9 @@ STRICT RULES:
             "openai": 0,
             "claude": 0,
             "perplexity": 0,
-            "grok": 0,
+            # "grok": 0,
             "kimi": 0,
-            "ari": 0,
+            # "ari": 0,
             "deepseek": 0
         }
 

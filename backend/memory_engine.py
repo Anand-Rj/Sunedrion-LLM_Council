@@ -24,7 +24,7 @@ class MemoryEngine:
         if not data["history"]:
             return user_prompt
 
-        totals = {"openai":0,"claude":0,"perplexity":0,"grok":0,"kimi":0,"ari":0,"deepseek":0}
+        totals = {"openai":0,"claude":0,"perplexity":0,"kimi":0,"deepseek":0}
 
         for rec in data["history"]:
             for model, score in rec["scores"].items():
