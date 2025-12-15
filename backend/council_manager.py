@@ -35,9 +35,9 @@ async def run_llm_council(user_prompt: str):
         "claude": results[1],
         "perplexity": results[2],
         # "grok": results[3],
-        "kimi": results[3],
+        "kimi": results[4],
         # "ari": results[5],
-        "deepseek": results[4]
+        "deepseek": results[6]
     }
 
     final_answer, scores = await chairman_arbitrate(user_prompt, outputs)
