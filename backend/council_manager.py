@@ -14,35 +14,37 @@ from backend.memory_engine import MemoryEngine
 
 memory = MemoryEngine()
 
+
 async def run_llm_council(user_prompt: str):
     improved_prompt = memory.adjust_prompt(user_prompt)
     prompts = optimize_prompt_for_all(improved_prompt)
 
+    # Only 5 active models now
     tasks = [
         call_openai_style(prompts["openai"], Config.OPENAI_BASE, Config.OPENAI_MODEL, Config.OPENAI_API_KEY),
         call_claude(prompts["claude"]),
         call_perplexity(prompts["perplexity"]),
-        # call_grok(prompts["grok"]),
         call_kimi(prompts["kimi"]),
-        # call_you(prompts["ari"]),
         call_deepseek(prompts["deepseek"])
     ]
 
     results = await asyncio.gather(*tasks)
 
+    # Correct mapping (NO grok, NO ari)
     outputs = {
         "openai": results[0],
         "claude": results[1],
         "perplexity": results[2],
-        # "grok": results[3],
-        "kimi": results[4],
-        # "ari": results[5],
-        "deepseek": results[6]
+        "kimi": results[3],
+        "deepseek": results[4]
     }
 
     final_answer, scores = await chairman_arbitrate(user_prompt, outputs)
 
     memory.store_record(user_prompt, outputs, scores)
 
-    return {"final": final_answer, "scores": scores, "outputs": outputs}
-
+    return {
+        "final": final_answer,
+        "scores": scores,
+        "outputs": outputs
+    }
