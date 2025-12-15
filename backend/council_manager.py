@@ -18,15 +18,14 @@ async def run_llm_council(user_prompt: str):
     improved_prompt = memory.adjust_prompt(user_prompt)
     prompts = optimize_prompt_for_all(improved_prompt)
 
-    # Wrap each call with timeout
+    TIMEOUT_DELEGATE = 35   # safe for Render
+
     tasks = [
-        run_with_timeout(
-            call_openai_style(prompts["openai"], Config.OPENAI_BASE, Config.OPENAI_MODEL, Config.OPENAI_API_KEY)
-        ),
-        run_with_timeout(call_claude(prompts["claude"])),
-        run_with_timeout(call_perplexity(prompts["perplexity"])),
-        run_with_timeout(call_kimi(prompts["kimi"])),
-        run_with_timeout(call_deepseek(prompts["deepseek"])),
+        run_with_timeout(call_openai_style(prompts["openai"], Config.OPENAI_BASE, Config.OPENAI_MODEL, Config.OPENAI_API_KEY), TIMEOUT_DELEGATE),
+        run_with_timeout(call_claude(prompts["claude"]), TIMEOUT_DELEGATE),
+        run_with_timeout(call_perplexity(prompts["perplexity"]), TIMEOUT_DELEGATE),
+        run_with_timeout(call_kimi(prompts["kimi"]), TIMEOUT_DELEGATE),
+        run_with_timeout(call_deepseek(prompts["deepseek"]), TIMEOUT_DELEGATE),
     ]
 
     results = await asyncio.gather(*tasks)
