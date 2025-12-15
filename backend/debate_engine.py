@@ -40,34 +40,6 @@ def extract_json(raw_text: str):
 
 
 # ============================================================
-#  Run Debate Stage: All Agents Respond
-# ============================================================
-
-async def run_debate_round(user_prompt: str):
-    """Send user prompt to all delegate models."""
-
-    results = {}
-
-    # Each model wrapped to prevent crashes
-    async def safe_call(tag, fn):
-        try:
-            return await fn(user_prompt)
-        except Exception as e:
-            return f"[{tag.upper()} ERROR] {str(e)}"
-
-    results["openai"] = await safe_call("openai", call_openai_style)
-    results["claude"] = await safe_call("claude", call_claude)
-    results["perplexity"] = await safe_call("perplexity", call_perplexity)
-    #results["grok"] = await safe_call("grok", call_grok)
-    results["kimi"] = await safe_call("kimi", call_kimi)
-    #results["you"] = await safe_call("you", call_you)
-    results["deepseek"] = await safe_call("deepseek", call_deepseek)
-
-    return results
-
-
-
-# ============================================================
 #  Chairman Arbitration (Gemini via OpenRouter)
 # ============================================================
 
@@ -153,6 +125,11 @@ STRICT RULES:
 
     # Extract JSON
     data = extract_json(content)
+
+    # Ensure missing or timeout models get score 0
+    for m in ["openai", "claude", "perplexity", "kimi", "deepseek"]:
+        if m not in data.get("scores", {}):
+            data["scores"][m] = 0
 
     # Validation
     if (

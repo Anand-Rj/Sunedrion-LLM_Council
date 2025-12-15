@@ -15,7 +15,7 @@ async def call_claude(prompt: str):
     }
 
     async with aiohttp.ClientSession() as session:
-        async with session.post(Config.ANTHROPIC_BASE, headers=headers, json=payload) as resp:
+        async with session.post(Config.ANTHROPIC_BASE, headers=headers, json=payload, timeout=20) as resp:
             data = await resp.json()
             try:
                 return data["content"][0]["text"]

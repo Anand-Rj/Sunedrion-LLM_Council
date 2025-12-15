@@ -16,7 +16,7 @@ async def call_kimi(prompt: str):
     }
 
     async with aiohttp.ClientSession() as session:
-        async with session.post(Config.KIMI_OPENROUTER_URL, json=payload, headers=headers) as resp:
+        async with session.post(Config.KIMI_OPENROUTER_URL, json=payload, headers=headers, timeout=20) as resp:
             try:
                 return await resp.json()
             except:
