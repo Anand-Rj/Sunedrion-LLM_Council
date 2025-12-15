@@ -21,7 +21,7 @@ async def call_gemini(prompt: str):
     }
 
     async with aiohttp.ClientSession() as session:
-        async with session.post(GEMINI_OPENROUTER_URL, json=payload, headers=headers, timeout=20) as resp:
+        async with session.post(GEMINI_OPENROUTER_URL, json=payload, headers=headers, timeout=60) as resp:
             try:
                 return await resp.json()
             except:
