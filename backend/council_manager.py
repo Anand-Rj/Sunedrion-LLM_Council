@@ -22,7 +22,7 @@ async def run_llm_council(user_prompt: str):
     TIMEOUT_DEEPSEEK = 50
     TIMEOUT_CLAUDE = 30
     TIMEOUT_PERPLEXITY = 25
-    TIMEOUT_KIMI = 25
+    TIMEOUT_KIMI = 65
 
     tasks = [
 

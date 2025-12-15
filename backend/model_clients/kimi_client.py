@@ -17,19 +17,23 @@ async def call_kimi(prompt: str):
     }
 
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                Config.KIMI_OPENROUTER_URL,
-                json=payload,
-                headers=headers,
-                timeout=40
-            ) as resp:
-                try:
-                    return await resp.json()
-                except:
-                    return await resp.text()
+        # 🔥 KIMI needs a higher timeout
+        async with asyncio.timeout(65):   # 65s total for KIMI
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    Config.KIMI_OPENROUTER_URL,
+                    json=payload,
+                    headers=headers,
+                    ssl=False    # fixes random TLS/stream resets
+                ) as resp:
 
-    except asyncio.CancelledError:
+                    # Try JSON first
+                    try:
+                        return await resp.json()
+                    except:
+                        return await resp.text()
+
+    except TimeoutError:
         return "TIMEOUT"
 
     except Exception as e:
