@@ -1,98 +1,55 @@
 import streamlit as st
-import requests
-import pandas as pd
+import asyncio
+import websockets
+import json
 import os
 
-st.set_page_config(
-    page_title="🏛️ Sunedrion – LLM Council",
-    page_icon="🔱"
-)
+st.set_page_config(page_title="🏛️ Sunedrion – LLM Council", page_icon="🔱")
+st.title("🏛️ Sunedrion – LLM Council (Streaming Mode)")
 
-st.title("🏛️ Sunedrion – LLM Council")
-
-# ---------------------------------------------------------
-# LOAD BACKEND URL (from Render Environment Variable)
-# ---------------------------------------------------------
-BACKEND = os.getenv("BACKEND_URL")
-
-# Debug print - remove later
-#st.write("🔧 BACKEND URL detected:", BACKEND)
-
-if not BACKEND:
-    st.error("❌ BACKEND_URL is missing. Set it in Render → Environment Variables.")
-    st.stop()
+BACKEND = os.getenv("BACKEND_URL").replace("https://", "wss://")
 
 prompt = st.text_area("Enter your question:")
 
-# ---------------------------------------------------------
-# RUN COUNCIL
-# ---------------------------------------------------------
 if st.button("Run Council"):
 
-    try:
-        response = requests.post(
-            f"{BACKEND}/council",
-            json={"prompt": prompt},
-            timeout=90  # free backend wakes up slowly
-        )
-    except Exception as e:
-        st.error(f"❌ Could not reach backend: {e}")
-        st.stop()
+    placeholder = st.empty()
+    result_box = st.empty()
+    scores_box = st.empty()
 
-    # ---------------------------------------------------------
-    # BACKEND ERROR HANDLING
-    # ---------------------------------------------------------
-    if response.status_code != 200:
-        st.error("❌ Backend returned an error:")
-        st.code(response.text)
-        st.stop()
+    async def run_stream():
+        async with websockets.connect(f"{BACKEND}/council-stream") as ws:
 
-    # Convert to JSON safely
-    try:
-        res = response.json()
-    except:
-        st.error("❌ Backend did not return valid JSON.")
-        st.code(response.text)
-        st.stop()
+            await ws.send(prompt)
 
-    #st.write("📬 Raw response from backend:", res)
+            final_answer = None
+            scores = None
 
-    # ---------------------------------------------------------
-    # VALIDATION FOR REQUIRED KEYS
-    # ---------------------------------------------------------
-    required_keys = ["final", "scores", "outputs"]
-    for key in required_keys:
-        if key not in res:
-            st.error(f"❌ Backend response missing field: '{key}'")
-            st.write("Full response:", res)
-            st.stop()
+            async for msg in ws:
 
-    # ---------------------------------------------------------
-    # FINAL ANSWER
-    # ---------------------------------------------------------
-    st.subheader("Final Answer")
-    st.markdown(res["final"])
+                if msg.startswith("STATUS:START"):
+                    placeholder.write("🚀 Running council...")
 
-    # ---------------------------------------------------------
-    # SCORES TABLE
-    # ---------------------------------------------------------
-    st.subheader("Scores")
-    df_scores = pd.DataFrame(
-        [{"Model": k, "Score": v} for k, v in res["scores"].items()]
-    ).sort_values(by="Score", ascending=False)
-    st.table(df_scores)
+                elif "STARTED" in msg:
+                    model = msg.split(":")[0]
+                    placeholder.write(f"⚙️ {model} started...")
 
-    # ---------------------------------------------------------
-    # RAW OUTPUTS FROM EACH DELEGATE
-    # ---------------------------------------------------------
-    st.subheader("Raw Delegate Outputs")
+                elif "FINISHED" in msg:
+                    model, _, data = msg.split(":", 2)
+                    placeholder.write(f"✅ {model} finished")
+                
+                elif msg.startswith("CHAIRMAN:FINAL"):
+                    final_answer = msg.split(":", 2)[2]
+                    result_box.markdown(f"### 🏛 Final Answer\n{final_answer}")
 
-    for model_name, output in res["outputs"].items():
-        with st.expander(f"🔽 {model_name.upper()}"):
+                elif msg.startswith("CHAIRMAN:SCORES"):
+                    scores = json.loads(msg.split(":", 2)[2])
+                    scores_list = [{"Model": k, "Score": v} for k, v in scores.items()]
+                    import pandas as pd
+                    scores_box.table(pd.DataFrame(scores_list))
 
-            if isinstance(output, dict):
-                st.json(output)
-            elif isinstance(output, str):
-                st.code(output, language="markdown")
-            else:
-                st.write(output)
+                elif msg == "STATUS:COMPLETE":
+                    placeholder.write("🎉 Completed!")
+                    break
+
+    asyncio.run(run_stream())
