@@ -1,55 +1,118 @@
 import streamlit as st
 import asyncio
 import websockets
-import json
 import os
+import pandas as pd
 
-st.set_page_config(page_title="🏛️ Sunedrion – LLM Council", page_icon="🔱")
+st.set_page_config(
+    page_title="🏛️ Sunedrion – LLM Council",
+    page_icon="🔱",
+    layout="wide"
+)
+
 st.title("🏛️ Sunedrion – LLM Council (Streaming Mode)")
 
-BACKEND = os.getenv("BACKEND_URL").replace("https://", "wss://")
+# -------------------------------------------------------------------
+# BACKEND WEBSOCKET URL
+# -------------------------------------------------------------------
+BACKEND = os.getenv("BACKEND_URL")
+
+if not BACKEND:
+    st.error("❌ BACKEND_URL is missing. Set it in Render → Environment Variables.")
+    st.stop()
+
+WS_URL = f"{BACKEND.replace('https://', 'wss://')}/ws"
 
 prompt = st.text_area("Enter your question:")
 
-if st.button("Run Council"):
+run_button = st.button("Run Council")
 
-    placeholder = st.empty()
-    result_box = st.empty()
-    scores_box = st.empty()
+# Hold streaming output
+stream_placeholders = {
+    "openai": st.empty(),
+    "claude": st.empty(),
+    "perplexity": st.empty(),
+    "kimi": st.empty(),
+    "deepseek": st.empty(),
+    "final": st.empty()
+}
 
-    async def run_stream():
-        async with websockets.connect(f"{BACKEND}/council-stream") as ws:
+# A nice divider
+st.markdown("---")
 
-            await ws.send(prompt)
+# Final score table
+scores_placeholder = st.empty()
 
-            final_answer = None
-            scores = None
 
-            async for msg in ws:
+# -------------------------------------------------------------------
+# ASYNC STREAM HANDLER
+# -------------------------------------------------------------------
+async def run_stream():
+    async with websockets.connect(WS_URL) as ws:
+        # Send user prompt
+        await ws.send(prompt)
 
-                if msg.startswith("STATUS:START"):
-                    placeholder.write("🚀 Running council...")
+        async for msg in ws:
+            msg = msg.strip()
 
-                elif "STARTED" in msg:
-                    model = msg.split(":")[0]
-                    placeholder.write(f"⚙️ {model} started...")
+            # SAFELY PARSE ANY MESSAGE FORMAT
+            parts = msg.split(":", 2)
 
-                elif "FINISHED" in msg:
-                    model, _, data = msg.split(":", 2)
-                    placeholder.write(f"✅ {model} finished")
-                
-                elif msg.startswith("CHAIRMAN:FINAL"):
-                    final_answer = msg.split(":", 2)[2]
-                    result_box.markdown(f"### 🏛 Final Answer\n{final_answer}")
+            if len(parts) == 3:
+                model, msg_type, data = parts
+            elif len(parts) == 2:
+                model, data = parts
+                msg_type = "info"
+            else:
+                st.write(f"⚠️ Unrecognized message format: {msg}")
+                continue
 
-                elif msg.startswith("CHAIRMAN:SCORES"):
-                    scores = json.loads(msg.split(":", 2)[2])
-                    scores_list = [{"Model": k, "Score": v} for k, v in scores.items()]
-                    import pandas as pd
-                    scores_box.table(pd.DataFrame(scores_list))
+            model = model.lower().strip()
 
-                elif msg == "STATUS:COMPLETE":
-                    placeholder.write("🎉 Completed!")
-                    break
+            # ----------------------------------------------------------
+            # MODEL-SPECIFIC STREAMING OUTPUT
+            # ----------------------------------------------------------
+            if model in stream_placeholders:
+                stream_placeholders[model].markdown(f"### 🔹 {model.upper()}\n{data}")
 
-    asyncio.run(run_stream())
+            # ----------------------------------------------------------
+            # FINAL JSON SUMMARY FROM CHAIRMAN
+            # ----------------------------------------------------------
+            if model == "finaljson":
+                try:
+                    import json
+                    result = json.loads(data)
+
+                    # Display final answer
+                    stream_placeholders["final"].markdown(
+                        f"## 🟦 Final Answer\n{result['final_answer']}"
+                    )
+
+                    # Show score table
+                    df = pd.DataFrame(
+                        [{"Model": k, "Score": v} for k, v in result["scores"].items()]
+                    ).sort_values(by="Score", ascending=False)
+
+                    scores_placeholder.table(df)
+
+                except Exception as e:
+                    stream_placeholders["final"].markdown(
+                        f"❌ Error parsing final JSON: {e}\n\nRaw data:\n```\n{data}\n```"
+                    )
+
+
+# -------------------------------------------------------------------
+# RUN BUTTON
+# -------------------------------------------------------------------
+if run_button:
+    if not prompt.strip():
+        st.error("Please enter a prompt.")
+        st.stop()
+
+    st.info("🔄 Running council… Streaming results below...")
+
+    # Run async WebSocket client
+    try:
+        asyncio.run(run_stream())
+    except Exception as e:
+        st.error(f"❌ WebSocket error: {e}")
