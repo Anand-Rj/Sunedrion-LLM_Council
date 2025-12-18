@@ -11,92 +11,99 @@ st.set_page_config(
 
 st.title("🏛️ Sunedrion – LLM Council (Streaming Mode)")
 
-# ---------------------------------------------------------
-# LOAD BACKEND URL
-# ---------------------------------------------------------
 BACKEND = os.getenv("BACKEND_URL")
 
 if not BACKEND:
-    st.error("❌ BACKEND_URL is missing. Set it in Render → Environment Variables.")
+    st.error("❌ BACKEND_URL missing in Render environment variables.")
     st.stop()
 
-prompt = st.text_area("Enter your question:")
+prompt = st.text_area("Enter your prompt")
 
-# Output placeholders
 final_answer_box = st.empty()
 scores_box = st.empty()
 models_box = st.container()
 
-# ---------------------------------------------------------
-# STREAMING LOGIC
-# ---------------------------------------------------------
 if st.button("Run Council"):
 
     with st.spinner("Council is thinking..."):
 
-        # 1️⃣ Build SSE URL
+        # Build SSE URL
         url = f"{BACKEND}/sse"
         full_url = f"{url}?prompt={requests.utils.quote(prompt)}"
 
-        # 2️⃣ Create SSE client (NO params argument)
-        messages = sseclient.SSEClient(full_url)
+        # -----------------------------------------
+        # ⭐ CORRECT WAY → Use requests.get(stream=True)
+        # -----------------------------------------
+        try:
+            response = requests.get(full_url, stream=True)
+        except Exception as e:
+            st.error(f"Could not connect to backend: {e}")
+            st.stop()
 
-        open_models = {}  # store outputs for display
+        if response.status_code != 200:
+            st.error(f"SSE connection failed: {response.text}")
+            st.stop()
 
-        # 3️⃣ Listen to SSE events
-        for event in messages:
+        # Feed raw HTTP stream → SSEClient
+        client = sseclient.SSEClient(response)
 
-            if not event.data:
-                continue
+        # Accumulate delegate outputs
+        model_outputs = {}
+
+        # -----------------------------------------
+        # Listen to SSE messages
+        # -----------------------------------------
+        for event in client.events():
 
             event_type = event.event
             raw = event.data
 
-            # -----------------------------------------
-            # Each delegate model output
-            # -----------------------------------------
+            if not raw:
+                continue
+
+            # -----------------------------
+            # Delegate model output
+            # -----------------------------
             if event_type == "model_output":
-                # backend sends → "model_name|output text"
                 try:
                     model, output = raw.split("|", 1)
                 except:
-                    continue  # malformed event
+                    continue
 
-                open_models[model] = output
+                model_outputs[model] = output
 
                 with models_box:
                     st.markdown(f"### 🔹 {model.upper()}")
                     st.code(output)
 
-            # -----------------------------------------
-            # Final Answer (string, NOT json)
-            # -----------------------------------------
+            # -----------------------------
+            # Final answer
+            # -----------------------------
             elif event_type == "final_answer":
                 final_answer_box.subheader("Final Answer")
                 final_answer_box.markdown(raw)
 
-            # -----------------------------------------
-            # Scores JSON (ONLY this is JSON)
-            # -----------------------------------------
+            # -----------------------------
+            # Scores (this IS JSON)
+            # -----------------------------
             elif event_type == "scores":
                 try:
                     scores = json.loads(raw)
-                    df = [{"Model": k, "Score": v} for k, v in scores.items()]
                     scores_box.subheader("Scores")
-                    scores_box.write(df)
+                    scores_box.write(scores)
                 except:
                     scores_box.error("Invalid scores JSON")
 
-            # -----------------------------------------
-            # Stream finished
-            # -----------------------------------------
+            # -----------------------------
+            # Done event → stop stream
+            # -----------------------------
             elif event_type == "done":
                 st.success("Council complete!")
                 break
 
-            # -----------------------------------------
-            # Errors coming from backend
-            # -----------------------------------------
+            # -----------------------------
+            # Error event
+            # -----------------------------
             elif event_type == "error":
-                st.error(f"Backend: {raw}")
+                st.error(f"Backend Error: {raw}")
 
