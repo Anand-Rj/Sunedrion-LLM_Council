@@ -1,7 +1,18 @@
 from fastapi import FastAPI
-from backend.websocket_endpoint import router as ws_router
+from fastapi.middleware.cors import CORSMiddleware
+
+from backend.sse_endpoint import router as sse_router
 
 app = FastAPI()
 
-# Add WebSocket router
-app.include_router(ws_router)
+# Allow Streamlit URL
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# SSE Router
+app.include_router(sse_router)
