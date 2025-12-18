@@ -14,70 +14,86 @@ st.title("🏛️ Sunedrion – LLM Council")
 BACKEND = os.getenv("BACKEND_URL")
 
 if not BACKEND:
-    st.error("❌ BACKEND_URL missing")
+    st.error("❌ BACKEND_URL is missing. Set it in Render → Environment Variables.")
     st.stop()
 
 prompt = st.text_area("Enter your question:")
 
 if st.button("Run Council"):
 
-    if not prompt:
-        st.warning("Please enter a prompt.")
+    if not prompt.strip():
+        st.error("Please enter a prompt.")
         st.stop()
 
-    st.write("⏳ Starting council...")
+    url = f"{BACKEND}/sse"
+    params = {"prompt": prompt}
 
-    # Create SSE request
-    try:
-        response = requests.get(
-            f"{BACKEND}/sse",
-            params={"prompt": prompt},
-            stream=True,
-            timeout=300
-        )
-    except Exception as e:
-        st.error(f"❌ Failed to connect to backend: {e}")
-        st.stop()
+    st.write("⏳ Running council…")
+    placeholder = st.empty()
 
-    # Initialize SSE client properly
-    messages = sseclient.SSEClient(response)
+    messages = sseclient.SSEClient(url, params=params)
 
-    # UI holders
-    final_box = st.empty()
-    scores_box = st.empty()
-    logs_box = st.empty()
+    models_output = {}
+    final_answer = None
+    scores = None
 
-    logs = []
+    for event in messages:
 
-    # ------------------------------------------------------
-    # FIX: THE CORRECT ITERATION METHOD → messages.events()
-    # ------------------------------------------------------
-    for event in messages.events():
+        event_type = event.event
+        raw = event.data
 
-        if event.event == "log":
-            logs.append(event.data)
-            logs_box.write("\n".join(logs))
+        # Debug print - optional
+        # st.write(f"EVENT = {event_type}, DATA = {raw}")
 
-        elif event.event == "model_start":
-            logs.append(f"🚀 {event.data} started")
-            logs_box.write("\n".join(logs))
+        # ---------------------------
+        # MODEL OUTPUT EVENT
+        # ---------------------------
+        if event_type == "model_output":
+            if "|" in raw:
+                model, output = raw.split("|", 1)
+                models_output[model] = output
 
-        elif event.event == "model_output":
-            out = json.loads(event.data)
-            logs.append(f"✅ {out['model']} finished")
-            logs_box.write("\n".join(logs))
+                with placeholder.container():
+                    st.subheader("Delegate Outputs (Live)")
+                    for m, o in models_output.items():
+                        st.write(f"### {m.upper()}")
+                        st.code(o)
+            else:
+                st.write(raw)
 
-        elif event.event == "model_error":
-            err = json.loads(event.data)
-            logs.append(f"❌ {err['model']} ERROR: {err['error']}")
-            logs_box.write("\n".join(logs))
+        # ---------------------------
+        # FINAL ANSWER EVENT
+        # ---------------------------
+        elif event_type == "final_answer":
+            final_answer = raw
 
-        elif event.event == "final_answer":
-            final_box.markdown("### 🧠 Final Answer\n" + event.data)
+        # ---------------------------
+        # SCORES EVENT (ONLY JSON)
+        # ---------------------------
+        elif event_type == "scores":
+            try:
+                scores = json.loads(raw)
+            except:
+                st.error("⚠️ Invalid scores JSON received.")
+                scores = None
 
-        elif event.event == "scores":
-            scores_box.json(json.loads(event.data))
-
-        elif event.event == "done":
-            st.success("Council completed!")
+        # ---------------------------
+        # DONE EVENT
+        # ---------------------------
+        elif event_type == "done":
             break
+
+    # ---------------------------
+    # DISPLAY FINAL RESULTS
+    # ---------------------------
+
+    if final_answer:
+        st.subheader("Final Answer")
+        st.markdown(final_answer)
+
+    if scores:
+        st.subheader("Scores")
+        score_rows = [{"Model": k, "Score": v} for k, v in scores.items()]
+        st.table(score_rows)
+
+    st.success("Council complete!")
