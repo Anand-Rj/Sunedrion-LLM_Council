@@ -9,8 +9,11 @@ st.set_page_config(
     page_icon="🔱"
 )
 
-st.title("🏛️ Sunedrion – LLM Council")
+st.title("🏛️ Sunedrion – LLM Council (Streaming Mode)")
 
+# ---------------------------------------------------------
+# LOAD BACKEND URL
+# ---------------------------------------------------------
 BACKEND = os.getenv("BACKEND_URL")
 
 if not BACKEND:
@@ -19,71 +22,81 @@ if not BACKEND:
 
 prompt = st.text_area("Enter your question:")
 
+# Output placeholders
+final_answer_box = st.empty()
+scores_box = st.empty()
+models_box = st.container()
+
+# ---------------------------------------------------------
+# STREAMING LOGIC
+# ---------------------------------------------------------
 if st.button("Run Council"):
 
-    if not prompt.strip():
-        st.error("Please enter a prompt.")
-        st.stop()
+    with st.spinner("Council is thinking..."):
 
-    # Build SSE URL with encoded query param
-    base_url = f"{BACKEND}/sse"
-    full_url = f"{base_url}?prompt={requests.utils.quote(prompt)}"
+        # 1️⃣ Build SSE URL
+        url = f"{BACKEND}/sse"
+        full_url = f"{url}?prompt={requests.utils.quote(prompt)}"
 
-    placeholder = st.empty()
-    st.write("⏳ Running council…")
-
-    try:
+        # 2️⃣ Create SSE client (NO params argument)
         messages = sseclient.SSEClient(full_url)
-    except Exception as e:
-        st.error(f"❌ Could not connect to SSE endpoint: {e}")
-        st.stop()
 
-    models_output = {}
-    final_answer = None
-    scores = None
+        open_models = {}  # store outputs for display
 
-    for event in messages:
+        # 3️⃣ Listen to SSE events
+        for event in messages:
 
-        event_type = event.event or ""   # sometimes None
-        raw = event.data or ""
+            if not event.data:
+                continue
 
-        # MODEL OUTPUT
-        if event_type == "model_output":
-            if "|" in raw:
-                model, output = raw.split("|", 1)
-                models_output[model] = output
+            event_type = event.event
+            raw = event.data
 
-                with placeholder.container():
-                    st.subheader("Delegate Outputs (Live)")
-                    for m, o in models_output.items():
-                        st.write(f"### {m.upper()}")
-                        st.code(o)
-            else:
-                st.write(raw)
+            # -----------------------------------------
+            # Each delegate model output
+            # -----------------------------------------
+            if event_type == "model_output":
+                # backend sends → "model_name|output text"
+                try:
+                    model, output = raw.split("|", 1)
+                except:
+                    continue  # malformed event
 
-        # FINAL ANSWER
-        elif event_type == "final_answer":
-            final_answer = raw
+                open_models[model] = output
 
-        # SCORES JSON
-        elif event_type == "scores":
-            try:
-                scores = json.loads(raw)
-            except:
-                st.error("⚠️ Invalid score JSON received.")
+                with models_box:
+                    st.markdown(f"### 🔹 {model.upper()}")
+                    st.code(output)
 
-        # DONE
-        elif event_type == "done":
-            break
+            # -----------------------------------------
+            # Final Answer (string, NOT json)
+            # -----------------------------------------
+            elif event_type == "final_answer":
+                final_answer_box.subheader("Final Answer")
+                final_answer_box.markdown(raw)
 
-    # === FINAL SUMMARY ===
-    if final_answer:
-        st.subheader("Final Answer")
-        st.markdown(final_answer)
+            # -----------------------------------------
+            # Scores JSON (ONLY this is JSON)
+            # -----------------------------------------
+            elif event_type == "scores":
+                try:
+                    scores = json.loads(raw)
+                    df = [{"Model": k, "Score": v} for k, v in scores.items()]
+                    scores_box.subheader("Scores")
+                    scores_box.write(df)
+                except:
+                    scores_box.error("Invalid scores JSON")
 
-    if scores:
-        st.subheader("Scores")
-        score_rows = [{"Model": k, "Score": v} for k, v in scores.items()]
-        st.table(score_rows)
+            # -----------------------------------------
+            # Stream finished
+            # -----------------------------------------
+            elif event_type == "done":
+                st.success("Council complete!")
+                break
 
-    st.success("Council complete!")
+            # -----------------------------------------
+            # Errors coming from backend
+            # -----------------------------------------
+            elif event_type == "error":
+                st.error(f"Backend: {raw}")
+
