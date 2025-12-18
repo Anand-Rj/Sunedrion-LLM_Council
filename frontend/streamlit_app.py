@@ -25,13 +25,18 @@ if st.button("Run Council"):
         st.error("Please enter a prompt.")
         st.stop()
 
-    url = f"{BACKEND}/sse"
-    params = {"prompt": prompt}
+    # Build SSE URL with encoded query param
+    base_url = f"{BACKEND}/sse"
+    full_url = f"{base_url}?prompt={requests.utils.quote(prompt)}"
 
     placeholder = st.empty()
     st.write("⏳ Running council…")
 
-    messages = sseclient.SSEClient(url, params=params)
+    try:
+        messages = sseclient.SSEClient(full_url)
+    except Exception as e:
+        st.error(f"❌ Could not connect to SSE endpoint: {e}")
+        st.stop()
 
     models_output = {}
     final_answer = None
@@ -39,10 +44,10 @@ if st.button("Run Council"):
 
     for event in messages:
 
-        event_type = event.event
-        raw = event.data
+        event_type = event.event or ""   # sometimes None
+        raw = event.data or ""
 
-        # MODEL OUTPUT EVENT
+        # MODEL OUTPUT
         if event_type == "model_output":
             if "|" in raw:
                 model, output = raw.split("|", 1)
@@ -60,19 +65,18 @@ if st.button("Run Council"):
         elif event_type == "final_answer":
             final_answer = raw
 
-        # SCORES (ONLY JSON)
+        # SCORES JSON
         elif event_type == "scores":
             try:
                 scores = json.loads(raw)
             except:
-                scores = None
-                st.error("⚠️ Invalid scores JSON received.")
+                st.error("⚠️ Invalid score JSON received.")
 
         # DONE
         elif event_type == "done":
             break
 
-    # OUTPUT FINAL RESULTS
+    # === FINAL SUMMARY ===
     if final_answer:
         st.subheader("Final Answer")
         st.markdown(final_answer)
