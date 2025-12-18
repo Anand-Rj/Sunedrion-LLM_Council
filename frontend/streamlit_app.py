@@ -28,8 +28,8 @@ if st.button("Run Council"):
     url = f"{BACKEND}/sse"
     params = {"prompt": prompt}
 
-    st.write("⏳ Running council…")
     placeholder = st.empty()
+    st.write("⏳ Running council…")
 
     messages = sseclient.SSEClient(url, params=params)
 
@@ -42,12 +42,7 @@ if st.button("Run Council"):
         event_type = event.event
         raw = event.data
 
-        # Debug print - optional
-        # st.write(f"EVENT = {event_type}, DATA = {raw}")
-
-        # ---------------------------
         # MODEL OUTPUT EVENT
-        # ---------------------------
         if event_type == "model_output":
             if "|" in raw:
                 model, output = raw.split("|", 1)
@@ -61,32 +56,23 @@ if st.button("Run Council"):
             else:
                 st.write(raw)
 
-        # ---------------------------
-        # FINAL ANSWER EVENT
-        # ---------------------------
+        # FINAL ANSWER
         elif event_type == "final_answer":
             final_answer = raw
 
-        # ---------------------------
-        # SCORES EVENT (ONLY JSON)
-        # ---------------------------
+        # SCORES (ONLY JSON)
         elif event_type == "scores":
             try:
                 scores = json.loads(raw)
             except:
-                st.error("⚠️ Invalid scores JSON received.")
                 scores = None
+                st.error("⚠️ Invalid scores JSON received.")
 
-        # ---------------------------
-        # DONE EVENT
-        # ---------------------------
+        # DONE
         elif event_type == "done":
             break
 
-    # ---------------------------
-    # DISPLAY FINAL RESULTS
-    # ---------------------------
-
+    # OUTPUT FINAL RESULTS
     if final_answer:
         st.subheader("Final Answer")
         st.markdown(final_answer)
