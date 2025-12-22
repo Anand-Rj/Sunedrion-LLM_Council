@@ -1,70 +1,63 @@
 import asyncio
-from backend.prompt_optimizer import optimize_prompt_for_all
-from backend.model_clients.gemini_client import call_gemini
+from backend.model_clients.openai_client import call_openai
 from backend.model_clients.claude_client import call_claude
 from backend.model_clients.perplexity_client import call_perplexity
-from backend.model_clients.kimi_client import call_kimi
 from backend.model_clients.deepseek_client import call_deepseek
-from backend.model_clients.openai_client import call_openai_style
-from backend.timeout_wrapper import run_with_timeout
+from backend.model_clients.kimi_client import call_kimi
 from backend.config import Config
-from backend.debate_engine import chairman_arbitrate
-from backend.memory_engine import MemoryEngine
+import aiohttp
 
-memory = MemoryEngine()
-
-async def run_llm_council(user_prompt: str):
-
-    improved_prompt = memory.adjust_prompt(user_prompt)
-    prompts = optimize_prompt_for_all(improved_prompt)
-
-    TIMEOUT_OPENAI = 45
-    TIMEOUT_DEEPSEEK = 50
-    TIMEOUT_CLAUDE = 30
-    TIMEOUT_PERPLEXITY = 25
-    TIMEOUT_KIMI = 65
-
-    tasks = [
-
-    # OPENAI (long timeout)
-    run_with_timeout(
-        call_openai_style(
-            prompts["openai"],
-            Config.OPENAI_BASE,
-            Config.OPENAI_MODEL,
-            Config.OPENAI_API_KEY
-        ),
-        TIMEOUT_OPENAI
-    ),
-
-    # CLAUDE
-    run_with_timeout(call_claude(prompts["claude"]), TIMEOUT_CLAUDE),
-
-    # PERPLEXITY
-    run_with_timeout(call_perplexity(prompts["perplexity"]), TIMEOUT_PERPLEXITY),
-
-    # KIMI
-    run_with_timeout(call_kimi(prompts["kimi"]), TIMEOUT_KIMI),
-
-    # DEEPSEEK (long timeout)
-    run_with_timeout(
-        call_deepseek(prompts["deepseek"]),
-        TIMEOUT_DEEPSEEK
-    )
-]
-
-    results = await asyncio.gather(*tasks)
-
-    outputs = {
-        "openai": results[0],
-        "claude": results[1],
-        "perplexity": results[2],
-        "kimi": results[3],
-        "deepseek": results[4]
+async def call_chairman(prompt: str, outputs: dict):
+    """
+    Arbitration by Gemini (OpenRouter)
+    """
+    headers = {
+        "Authorization": f"Bearer {Config.OPENROUTER_API_KEY}",
+        "Content-Type": "application/json"
     }
 
-    final_answer, scores = await chairman_arbitrate(user_prompt, outputs)
+    arbitration_prompt = (
+        f"You are the chairman of a model council.\n\n"
+        f"User prompt:\n{prompt}\n\n"
+        f"Model responses:\n"
+    )
+    for k, v in outputs.items():
+        arbitration_prompt += f"\n[{k.upper()}]\n{v}\n"
 
-    memory.store_record(user_prompt, outputs, scores)
+    arbitration_prompt += "\nPick the best answer and explain why."
 
-    return {"final": final_answer, "scores": scores, "outputs": outputs}
+    payload = {
+        "model": Config.CHAIRMAN_MODEL,
+        "messages": [{"role": "user", "content": arbitration_prompt}]
+    }
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(Config.OPENROUTER_URL, headers=headers, json=payload) as resp:
+            try:
+                data = await resp.json()
+                return data["choices"][0]["message"]["content"]
+            except:
+                return f"[Chairman Error] {await resp.text()}"
+
+
+async def run_council(prompt: str):
+    """
+    Execute all 5 delegates in parallel, then chairman.
+    """
+
+    tasks = {
+        "openai": asyncio.create_task(call_openai(prompt)),
+        "claude": asyncio.create_task(call_claude(prompt)),
+        "perplexity": asyncio.create_task(call_perplexity(prompt)),
+        "deepseek": asyncio.create_task(call_deepseek(prompt)),
+        "kimi": asyncio.create_task(call_kimi(prompt)),
+    }
+
+    results = {name: await task for name, task in tasks.items()}
+
+    chairman = await call_chairman(prompt, results)
+
+    return {
+        "delegate_outputs": results,
+        "final_answer": chairman
+    }

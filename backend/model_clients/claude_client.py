@@ -15,10 +15,9 @@ async def call_claude(prompt: str):
     }
 
     async with aiohttp.ClientSession() as session:
-        async with session.post(Config.ANTHROPIC_BASE, headers=headers, json=payload, timeout=20) as resp:
-            data = await resp.json()
+        async with session.post(Config.ANTHROPIC_BASE, headers=headers, json=payload) as resp:
             try:
+                data = await resp.json()
                 return data["content"][0]["text"]
             except:
-                return f"[Claude Error] {data}"
-
+                return f"[Claude Error] {await resp.text()}"

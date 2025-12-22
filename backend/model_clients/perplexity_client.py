@@ -1,8 +1,21 @@
-from backend.model_clients.openai_client import call_openai_style
 from backend.config import Config
+import aiohttp
 
 async def call_perplexity(prompt: str):
-    return await call_openai_style(
-        prompt, Config.PERPLEXITY_BASE, Config.PERPLEXITY_MODEL, Config.PERPLEXITY_API_KEY
-    )
+    headers = {
+        "Authorization": f"Bearer {Config.PERPLEXITY_API_KEY}",
+        "Content-Type": "application/json"
+    }
 
+    payload = {
+        "model": Config.PERPLEXITY_MODEL,
+        "messages": [{"role": "user", "content": prompt}]
+    }
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(Config.PERPLEXITY_BASE, headers=headers, json=payload) as resp:
+            try:
+                data = await resp.json()
+                return data["choices"][0]["message"]["content"]
+            except:
+                return f"[Perplexity Error] {await resp.text()}"

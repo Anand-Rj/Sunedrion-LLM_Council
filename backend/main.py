@@ -1,11 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from backend.routes.council import router as council_router
 
-from backend.sse_endpoint import router as sse_router
+app = FastAPI(title="Sunedrion LLM Council – Stable API")
 
-app = FastAPI()
-
-# Allow Streamlit URL
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -14,5 +12,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# SSE Router
-app.include_router(sse_router)
+app.include_router(council_router)
+
+@app.get("/")
+def root():
+    return {"status": "Sunedrion backend running"}

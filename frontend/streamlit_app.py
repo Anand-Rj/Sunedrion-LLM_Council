@@ -1,109 +1,81 @@
 import streamlit as st
 import requests
-import sseclient
-import json
 import os
 
 st.set_page_config(
     page_title="🏛️ Sunedrion – LLM Council",
-    page_icon="🔱"
+    page_icon="🔱",
+    layout="wide"
 )
 
-st.title("🏛️ Sunedrion – LLM Council (Streaming Mode)")
+st.title("🏛️ Sunedrion – LLM Council")
 
 BACKEND = os.getenv("BACKEND_URL")
 
 if not BACKEND:
-    st.error("❌ BACKEND_URL missing in Render environment variables.")
+    st.error("❌ BACKEND_URL is not set in environment variables.")
     st.stop()
 
-prompt = st.text_area("Enter your prompt")
+prompt = st.text_area("Enter your prompt:", height=200)
+
+col1, col2 = st.columns([1, 4])
+
+with col1:
+    run = st.button("Run Council", type="primary")
 
 final_answer_box = st.empty()
-scores_box = st.empty()
-models_box = st.container()
+delegate_container = st.container()
+score_container = st.container()
 
-if st.button("Run Council"):
+if run:
+    if not prompt.strip():
+        st.warning("Please enter a prompt.")
+        st.stop()
 
-    with st.spinner("Council is thinking..."):
-
-        # Build SSE URL
-        url = f"{BACKEND}/sse"
-        full_url = f"{url}?prompt={requests.utils.quote(prompt)}"
-
-        # -----------------------------------------
-        # ⭐ CORRECT WAY → Use requests.get(stream=True)
-        # -----------------------------------------
+    with st.spinner("Council is deliberating..."):
         try:
-            response = requests.get(full_url, stream=True)
+            response = requests.post(
+                f"{BACKEND}/council/run",
+                params={"prompt": prompt},
+                timeout=600
+            )
         except Exception as e:
-            st.error(f"Could not connect to backend: {e}")
+            st.error(f"Backend connection failed: {e}")
             st.stop()
 
         if response.status_code != 200:
-            st.error(f"SSE connection failed: {response.text}")
+            st.error(f"Backend Error: {response.text}")
             st.stop()
 
-        # Feed raw HTTP stream → SSEClient
-        client = sseclient.SSEClient(response)
+        data = response.json()
 
-        # Accumulate delegate outputs
-        model_outputs = {}
+        delegates = data["delegate_outputs"]
+        final_answer = data["final_answer"]
 
-        # -----------------------------------------
-        # Listen to SSE messages
-        # -----------------------------------------
-        for event in client.events():
+        # -------------------------
+        # Display Final Answer
+        # -------------------------
+        final_answer_box.subheader("🏆 Final Chairman Verdict")
+        final_answer_box.markdown(final_answer)
 
-            event_type = event.event
-            raw = event.data
+        # -------------------------
+        # Delegates Output
+        # -------------------------
+        st.subheader("🧠 Delegate Model Outputs")
 
-            if not raw:
-                continue
+        for model, output in delegates.items():
+            st.markdown(f"### 🔹 {model.upper()}")
+            st.code(output, language="markdown")
 
-            # -----------------------------
-            # Delegate model output
-            # -----------------------------
-            if event_type == "model_output":
-                try:
-                    model, output = raw.split("|", 1)
-                except:
-                    continue
+        # -------------------------
+        # Score Table (text similarity)
+        # -------------------------
+        st.subheader("📊 Delegate Agreement Score")
 
-                model_outputs[model] = output
+        # Compute simple matching score for display
+        scores = {}
+        for model, output in delegates.items():
+            overlap = len(set(final_answer.split()) & set(output.split()))
+            scores[model] = overlap
 
-                with models_box:
-                    st.markdown(f"### 🔹 {model.upper()}")
-                    st.code(output)
-
-            # -----------------------------
-            # Final answer
-            # -----------------------------
-            elif event_type == "final_answer":
-                final_answer_box.subheader("Final Answer")
-                final_answer_box.markdown(raw)
-
-            # -----------------------------
-            # Scores (this IS JSON)
-            # -----------------------------
-            elif event_type == "scores":
-                try:
-                    scores = json.loads(raw)
-                    scores_box.subheader("Scores")
-                    scores_box.write(scores)
-                except:
-                    scores_box.error("Invalid scores JSON")
-
-            # -----------------------------
-            # Done event → stop stream
-            # -----------------------------
-            elif event_type == "done":
-                st.success("Council complete!")
-                break
-
-            # -----------------------------
-            # Error event
-            # -----------------------------
-            elif event_type == "error":
-                st.error(f"Backend Error: {raw}")
-
+        st.table(scores)

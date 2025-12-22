@@ -1,33 +1,21 @@
-# backend/model_clients/openai_client.py
-
 import aiohttp
 from backend.config import Config
 
-async def call_openai_style(prompt: str, base_url: str, model: str, api_key: str):
-    """
-    Generic OpenAI-style chat-completion caller.
-    Used by OpenAI, Perplexity, You.com, DeepSeek, Grok (most of them use OpenAI protocol).
-    """
-
+async def call_openai(prompt: str):
     headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {api_key}"
+        "Authorization": f"Bearer {Config.OPENAI_API_KEY}",
+        "Content-Type": "application/json"
     }
 
     payload = {
-        "model": model,
-        "messages": [
-            {"role": "user", "content": prompt}
-        ]
+        "model": Config.OPENAI_MODEL,
+        "messages": [{"role": "user", "content": prompt}]
     }
 
     async with aiohttp.ClientSession() as session:
-        async with session.post(base_url, json=payload, headers=headers, timeout=50) as resp:
-            text = await resp.text()
-
-            # Return raw text (llm response or error)
+        async with session.post(Config.OPENAI_BASE, headers=headers, json=payload) as resp:
             try:
                 data = await resp.json()
-                return data.get("choices", [{}])[0].get("message", {}).get("content", text)
+                return data["choices"][0]["message"]["content"]
             except:
-                return text
+                return f"[OpenAI Error] {await resp.text()}"
